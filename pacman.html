@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Pacman</title>
+	<style>
+		table, td {
+		border: 1px solid #000;
+		padding : 0px;
+		margin : 0px;
+	}
+	</style>
+</head>
+
+<body>
+    
+    
+	<div id="formulaire">
+		
+		<button onclick="go()">GO !</button>
+		<p>
+			<button onclick="clavier(37)" accesskey="g">Gauche</button>
+			<button onclick="clavier(38)" accesskey="h">Haut</button>
+			<button onclick="clavier(39)" accesskey="d">Droite</button>
+			<button onclick="clavier(40)" accesskey="b">Bas</button>
+		</p>		
+		<div id="info"></div>
+	</div>
+    <div id="contenu">
+	</div>
+</body>
+<script src="personnage.class.js"></script>
+<script>
+    //insérer ici le code javascript de génération de la table
+    //Génération d'une table HTML de nbl ligne et nbc colonnes    
+	let oTable;
+	let pacman;
+	let nbc=20;
+	let nbl=20;
+	let fleches = {
+		"gauche" : 37,
+		"haut" : 38,
+		"droit" : 39,
+		"bas" : 40
+	};
+	
+	function go() {
+		document.addEventListener("keydown",getCodeClavier);
+		oTable=document.createElement("table");
+		oTable.tabindex="1";
+		document.body.appendChild(oTable);
+		for(let i=0; i<nbl; i++) {
+			let oTr=document.createElement("tr");
+			oTable.appendChild(oTr);
+			for(let j=0; j<nbc; j++) {
+				let oTd=document.createElement("td");
+				oTr.appendChild(oTd);
+				oTd.style.width="50px";
+				oTd.style.height="50px";
+				
+					if((i%2==0 && j!==2 && j!==17) && (j<4 || j>4) && (j<13 || j>13))
+					{
+						oTd.innerHTML="X";
+						oTd.style.backgroundColor="#000";
+					}
+				
+			}
+		}
+		let trouve=false;
+		let li,co,oTd;
+		while (!trouve) {
+			li=mtrand(0,nbl.value-1);
+			co=mtrand(0,nbc.value-1);
+			oTd=oTable.rows[li].cells[co];
+			if (oTd.innerHTML!="X")
+				trouve=true;
+		}
+		//creation du personnage et affichage des infos
+		pacman=new Personnage(li,co,"pacman.gif","Pacman");
+		info.innerHTML=pacman.ligne + "," + pacman.colonne;
+		
+	}
+	
+	
+	
+	function getCodeClavier(event){
+		clavier(event.keyCode);
+	}
+	
+	function clavier(key) {
+		
+		let newligne=pacman.ligne;
+		let newcolonne=pacman.colonne;
+		
+		if (key==fleches.gauche) {
+			if (newcolonne>0)
+				newcolonne--;
+			else 
+				newcolonne=nbc.value-1;
+		} else if (key==fleches.haut) {
+			if (newligne>0)
+				newligne--;
+			else 
+				newligne=nbl.value-1;
+		} else if (key==fleches.droit) {
+			if (newcolonne<nbc.value-1)
+				newcolonne++;
+			else
+				newcolonne=0;
+		} else if (key==fleches.bas) {
+			if (newligne<nbl.value-1)
+				newligne++;
+			else
+				newligne=0;
+		}
+		
+		let oTd=oTable.rows[newligne].cells[newcolonne];
+		//if (oTd.innerHTML!="X") {
+			pacman.deplacer(newligne,newcolonne);	
+			info.innerHTML=pacman.ligne + "," + pacman.colonne;
+		//}
+	}
+	
+	//Tire au hasard un entier entre para1 et para2
+	function mtrand(para1,para2) {
+		return  Math.round((para2-para1)*Math.random() + para1);
+	}
+</script>
+
+</html>

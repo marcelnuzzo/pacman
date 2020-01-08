@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Melange</title>
+	<style>
+		table, td {
+		border: 1px solid #000;
+		padding : 10px;
+		margin : 0px;
+	}
+	</style>
+</head>
+
+<body>
+	<div id="formulaire">
+		<button onclick="go()">GO !</button>
+		<p>
+			<button onclick="clavier(37)" accesskey="g">Gauche</button>
+			<button onclick="clavier(38)" accesskey="h">Haut</button>
+			<button onclick="clavier(39)" accesskey="d">Droite</button>
+			<button onclick="clavier(40)" accesskey="b">Bas</button>
+		</p>		
+		<div id="info"></div>
+	</div>
+    <div id="contenu">
+	</div>
+</body>
+<script src="personnage.class.js"></script>
+<script>
+    
+	let nbc=10;
+	let nbl=9;
+	let oTable;
+	let pacman,fantome;//loup,pigeon;
+	let fleches = {
+		"gauche" : 37,
+		"haut" : 38,
+		"droit" : 39,
+		"bas" : 40
+	};
+	
+	let unpas = document.createElement("audio");
+	unpas.src = "pigeon.mp3";
+	let bordGrille = document.createElement("audio");
+	bordGrille.src = "grille.mp3";
+	let caseNoire = document.createElement("audio");
+	caseNoire.src = "case.mp3";
+	
+	function go() {
+		document.addEventListener("keydown",getCodeClavier);
+		oTable=document.createElement("table");
+		oTable.tabindex="1";
+		document.body.appendChild(oTable);
+		for(let i=0; i<nbl; i++) {
+			let oTr=document.createElement("tr");
+			oTable.appendChild(oTr);
+			for(let j=0; j<nbc; j++) {
+				let oTd=document.createElement("td");
+				oTr.appendChild(oTd);
+				oTd.style.width="25px";
+				oTd.style.height="25px";
+				
+				if(j>0 && j<9 && j!==5 && i%2!==0 && i!==9)
+				{
+					oTd.innerHTML="X";
+					oTd.style.backgroundColor="#000";
+				}
+			}
+		}
+			
+		let tab=getCelluleVide();
+		//creation du personnage Pacman et affichage des infos
+		pacman=new Personnage(tab[0],tab[1],"pacman.gif","Pacman");
+		info.innerHTML=pacman.ligne + "," + pacman.colonne;
+		
+		//creation du personnage fantome et affichage des infos
+		tab=getCelluleVide();
+		fantome=new Personnage(tab[0],tab[1],"fantome.png","Fantome");
+	}
+	
+	function getCelluleVide() {
+		//recherche d'une cellule au hasard vide
+		let trouve=false;
+		let li,co,oTd;
+		while (!trouve) {
+			li=mtrand(0,nbl-1);
+			co=mtrand(0,nbc-1);
+			oTd=oTable.rows[li].cells[co];
+			if (oTd.innerHTML=="")
+				trouve=true;
+		}
+		
+		return [li,co];
+	}
+	
+	//retourne une valeur de volume entre 1 et 0 en fonction de la distance entre le loup et le pigeon
+	function getVolume() {
+		let d=Math.abs(pacman.ligne-fantome.ligne) + Math.abs(pacman.colonne-fantome.colonne);
+		let dmax = parseInt(nbl) + parseInt(nbc);
+		let dmin = 1;
+		let b = 1;
+		let a = -b/Math.log(dmax);
+		return a*Math.log(d) + b;		
+	}
+	
+	function getCodeClavier(event){
+		clavier(event.keyCode);
+	}
+	
+	function clavier(key) {
+		unpas.pause();
+		unpas.currentTime = 0;
+		
+	/* Déplacement de pacman */
+		let newligne=pacman.ligne;
+		let newcolonne=pacman.colonne;
+		
+		//test si on sort de la grille
+		let tab=testBord(newligne,newcolonne,key);
+		if (tab===false)
+			bordGrille.play();
+		else {
+			newligne=tab[0];
+			newcolonne=tab[1];
+		}
+		
+		//test case vide
+		if (testCaseVide(newligne,newcolonne)) {
+			pacman.deplacer(newligne,newcolonne);	
+			info.innerHTML=pacman.ligne + "," + pacman.colonne;
+			unpas.volume=getVolume();
+			unpas.play();			
+		} else {
+			caseNoire.play();
+		}
+	/* FIN Deplacement du loup */
+	
+	/* Déplacement du fantome */
+		IA_Fantome();
+	/* FIN Deplacement du pigeon */
+	}
+	
+	/*
+		Déplace le fantome sur les coordonnées qui maximalise la distance avec pacman ou rien si aucun déplacement possible
+	*/
+	function IA_Fantome() {
+		//let dmax=Math.abs(pacman.ligne-fantome.ligne) + Math.abs(pacman.colonne-fantome.colonne); //distance avec pacman
+		let dmax=0;
+		let tabmax=false;
+		for(key=37; key<=40; key++) {
+			//test si on sort de la grille
+			let tab=testBord_IA(fantome.ligne,fantome.colonne,key);
+			if (tab!==false) {
+				//test case vide
+				if (testCaseVide(tab[0],tab[1])) {
+					let d=Math.abs(pacman.ligne-tab[0]) + Math.abs(pacman.colonne-tab[1]);
+					if (d>dmax) {
+						dmax=d;
+						tabmax=tab;
+					}						
+				}			
+			}		
+		}
+				
+		if (tabmax!==false)
+			fantome.deplacer(tabmax[0],tabmax[1]);			
+	}
+	
+	/*
+		retourne false si case non vide, sinon retourne true;
+	*/
+	function testCaseVide(newligne,newcolonne) {
+		let oTd=oTable.rows[newligne].cells[newcolonne];
+		if (oTd.innerHTML=="")
+			return true;
+		else
+			return false;
+	}
+	/* 
+		- key = keyCode d'une fleche
+		Retourne les nouvelles coordonnées [li,co] si reste dans la grille, sinon retourne false
+	*/
+	function testBord(newligne,newcolonne,key) {
+		if (key==fleches.gauche) {
+			if (newcolonne>0)
+				newcolonne--;
+			else 
+				newcolonne=nbc-1;
+		} else if (key==fleches.haut) {
+			if (newligne>0)
+				newligne--;
+			else 
+				newligne=nbl-1;
+		} else if (key==fleches.droit) {
+			if (newcolonne<nbc-1)
+				newcolonne++;
+			else
+				newcolonne=0;
+		} else if (key==fleches.bas) {
+			if (newligne<nbl-1)
+				newligne++;
+			else
+				newligne=0;
+		}
+		
+		return [newligne,newcolonne];
+	}
+	
+	function testBord_IA(newligne,newcolonne,key) {
+		if (key==fleches.gauche) {
+			if (newcolonne>0)
+				newcolonne--;
+			else
+				return false;
+		} else if (key==fleches.haut) {
+			if (newligne>0)
+				newligne--;
+			else
+				return false;
+		} else if (key==fleches.droit) {
+			if (newcolonne<nbc.value-1)
+				newcolonne++;
+			else
+				return false;
+		} else if (key==fleches.bas) {
+			if (newligne<nbl.value-1)
+				newligne++;
+			else
+				return false;
+		}
+
+		
+		return [newligne,newcolonne];
+	}
+	
+	//Tire au hasard un entier entre para1 et para2
+	function mtrand(para1,para2) {
+		return  Math.round((para2-para1)*Math.random() + para1);
+	}
+</script>
+
+</html>
